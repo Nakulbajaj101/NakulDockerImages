@@ -1,0 +1,26 @@
+spotlight-feeds:
+  outputs:
+    dev:
+      type: bigquery
+      method: service-account
+      project: bridge_data_analytics
+      dataset: nakul # You can also use "schema" here
+      threads: 10
+      timeout_seconds: 300
+      keyfile: /source/serviceaccounts/service-account-key.json
+      location: australia-southeast1 # Optional, one of US or EU
+      priority: interactive
+      retries: 3
+
+    prod:
+      type: bigquery
+      method: service-account
+      project: bridge_data_analytics
+      dataset: main # You can also use "schema" here
+      threads: 10
+      timeout_seconds: 300
+      keyfile: /source/serviceaccounts/service-account-key.json
+      location: australia-southeast1 # Optional, one of US or EU
+      priority: interactive
+      retries: 3
+  target: dev

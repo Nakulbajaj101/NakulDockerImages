@@ -1,0 +1,125 @@
+version: '2.1'
+services:
+    redis:
+        image: 'redis:3.2.7'
+        # command: redis-server --requirepass redispass
+
+    postgres:
+        image: postgres:9.6
+        environment:
+            - POSTGRES_USER=airflow
+            - POSTGRES_PASSWORD=airflow
+            - POSTGRES_DB=airflow
+            - ADDITIONAL_DATABASE=sales
+            - ADDITIONAL_USER=nakul
+            - ADDITIONAL_USER_PASSWORD=default12345
+            - PGDATA=/var/lib/postgresql/data/pgdata
+        ports:
+            - "5432:5432"
+        logging:
+            options:
+                max-size: 10m
+                max-file: "3"
+        volumes:
+            - ./data/postgres:/var/lib/postgresql/data
+            - ./sales:/var/lib/postgresql/sales
+            - ./script/postgresEntry.sh:/docker-entrypoint-initdb.d/postgresEntry.sh
+            - ./pgdata:/var/lib/postgresql/data/pgdata
+           
+
+    webserver:
+        build:
+            dockerfile: Dockerfile
+            context: ./
+        restart: always
+        depends_on:
+            - postgres
+            - redis
+        environment:
+            - LOAD_EX=n
+            - EXECUTOR=Celery
+            - AIRFLOW__SMTP__SMTP_HOST=smtp.sendgrid.net
+            - AIRFLOW__SMTP__SMTP_STARTTLS=True
+            - AIRFLOW__SMTP__SMTP_SSL=False
+            - AIRFLOW__SMTP__SMTP_USER=apikey
+            - AIRFLOW__SMTP__SMTP_PASSWORD=####################################
+            - AIRFLOW__SMTP__SMTP_PORT=587
+            - AIRFLOW__SMTP__SMTP_MAIL_FROM="bajaj.nakul@gmail.com"
+            - SENDGRID_API_KEY=####################################
+            - SENDGRID_MAIL_FROM="bajaj.nakul@gmail.com"
+            - POSTGRES_USER=airflow
+            - POSTGRES_PASSWORD=airflow
+            - POSTGRES_DB=airflow
+            - POSTGRES_HOST=postgres
+            - POSTGRES_PORT=5432
+            - ADDITIONAL_DATABASE=sales
+            - ADDITIONAL_USER=nakul
+            - ADDITIONAL_USER_PASSWORD=default12345
+            - AIRFLOW__CORE__FERNET_KEY=xetM_vzN1F0gK9ju5jnJFw4VyNjS7w6u-oZw8qrmPT8=
+        volumes:
+            - ./dags:/usr/local/airflow/dags
+            - ./sales:/usr/local/airflow/sales
+            - ~/.config/:/usr/local/airflow/.config #google cloud connection
+            - ./config/airflow.cfg:/usr/local/airflow/airflow.cfg
+            - ./plugins:/usr/local/airflow/plugins
+            - ./airflow_connections_variables.sh:/usr/local/airflow/airflow_connections_variables.sh
+        ports:
+            - "8081:8080"
+        command: webserver
+        healthcheck:
+            test: ["CMD-SHELL", "[ -f /usr/local/airflow/airflow-webserver.pid ]"]
+            interval: 30s
+            timeout: 30s
+            retries: 3
+
+    flower:
+        build:
+            dockerfile: Dockerfile
+            context: ./
+        restart: always
+        depends_on:
+            - redis
+        environment:
+            - EXECUTOR=Celery
+        ports:
+            - "5555:5555"
+        command: flower
+
+    scheduler:
+        build:
+            dockerfile: Dockerfile
+            context: ./
+        restart: always
+        depends_on:
+            - webserver
+        volumes:
+            - ./dags:/usr/local/airflow/dags
+            - ./sales:/usr/local/airflow/sales
+            - ~/.config/:/usr/local/airflow/.config #google cloud connection
+            - ./config/airflow.cfg:/usr/local/airflow/airflow.cfg
+            - ./plugins:/usr/local/airflow/plugins
+            - ./airflow_connections_variables.sh:/usr/local/airflow/airflow_connections_variables.sh
+        environment:
+            - LOAD_EX=n
+            - AIRFLOW__CORE__FERNET_KEY=xetM_vzN1F0gK9ju5jnJFw4VyNjS7w6u-oZw8qrmPT8=
+            - EXECUTOR=Celery
+        command: scheduler
+
+    worker:
+        build:
+            dockerfile: Dockerfile
+            context: ./
+        restart: always
+        depends_on:
+            - scheduler
+        volumes:
+            - ./dags:/usr/local/airflow/dags
+            - ./sales:/usr/local/airflow/sales
+            - ~/.config/:/usr/local/airflow/.config #google cloud connection
+            - ./config/airflow.cfg:/usr/local/airflow/airflow.cfg
+            - ./plugins:/usr/local/airflow/plugins
+            - ./airflow_connections_variables.sh:/usr/local/airflow/airflow_connections_variables.sh
+        environment:
+            - AIRFLOW__CORE__FERNET_KEY=xetM_vzN1F0gK9ju5jnJFw4VyNjS7w6u-oZw8qrmPT8=
+            - EXECUTOR=Celery
+        command: worker
