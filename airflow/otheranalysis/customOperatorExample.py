@@ -16,7 +16,7 @@ args=dict(
 dag=DAG('custom_operator_example',default_view="graph", schedule_interval="@once",start_date=datetime(2020,5,1), catchup=False, default_args=args)
 
 def trigger_local_to_gcs_hook():
-    LocalToGcsHook().copy_directory("/usr/local/airflow/sales", "anz-insto-dev-economics-import","Nakul", "fs_default")
+    LocalToGcsHook().copy_directory("/usr/local/airflow/sales", "bridge_data_analytics","Nakul", "fs_default")
 
 t1 = CleanStringOperator(task_id="clean_file",
                         original_file_path="/usr/local/airflow/sales/raw_file.txt",

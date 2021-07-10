@@ -7,7 +7,7 @@ from airflow.operators.email_operator import EmailOperator
 from airflow.contrib.sensors.gcs_sensor import GoogleCloudStorageObjectSensor
 from airflow.contrib.sensors.file_sensor import FileSensor
 from airflow.models import Variable
-from economics.datacleaner import datacleaner
+from otheranalysis.datacleaner import datacleaner
 
 default_args = {
     "owner" : "Nakul Bajaj",
@@ -31,7 +31,7 @@ with DAG('store_dag', default_args=default_args, schedule_interval="@daily", def
 
     gcsSensor = GoogleCloudStorageObjectSensor(
             task_id='check_file_exists_in_gcs',
-            bucket='anz-insto-dev-economics-import',
+            bucket='bridge_data_analytics',
             object='raw_store_transactions.csv',
             google_cloud_conn_id='google_cloud_default',
             poke_interval=30,
