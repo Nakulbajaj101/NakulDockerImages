@@ -1,0 +1,49 @@
+include:
+
+image: gcr.io/bridge-data-analytics/cicd/dbt:0.19.0-0.1.2
+
+stages:
+- run
+
+dbt_run_merge:
+  stage: run
+  script:
+    - echo Starting the merge pipeline
+
+
+.dbt_run_dev:
+  stage: run
+  variables:
+    GCP_ENV: dev
+  script:
+    - dbt run --project-dir dbt-projects/$DBT_PROJECT --profiles-dir profiles/$DBT_PROFILE_DIR --target $GCP_ENV
+    - dbt test --project-dir dbt-projects/$DBT_PROJECT --profiles-dir profiles/$DBT_PROFILE_DIR --target $GCP_ENV
+  rules:
+  - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    changes:
+    - dbt-projects/$DBT_PROJECT/**
+    - profiles/$DBT_PROFILE_DIR/profiles.yml
+
+.dbt_run_stage:
+  stage: run
+  variables:
+    GCP_ENV: stage
+  script:
+    - dbt run --project-dir dbt-projects/$DBT_PROJECT --profiles-dir profiles/$DBT_PROFILE_DIR --target $GCP_ENV
+  rules:
+  - if: '$CI_PIPELINE_SOURCE == "push" && $CI_BUILD_REF_NAME == "master"'
+    changes:
+    - dbt-projects/$DBT_PROJECT/**
+    - profiles/$DBT_PROFILE_DIR/profiles.yml
+
+first_project_dev:
+  extends: .dbt_run_dev
+  variables: 
+    DBT_PROJECT: project
+    DBT_PROFILE_DIR: project-profile
+
+first_project_stage:
+  extends: .dbt_run_stage
+  variables: 
+    DBT_PROJECT: project
+    DBT_PROFILE_DIR: project-profile
